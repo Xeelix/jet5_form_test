@@ -19,13 +19,16 @@ import os
 
 
 class StatusTypes(Enum):
+    """Enum for determining type of error in form"""
     complete = 0,
     error_data = 1,
     error_loading_time = 2
 
 
 class Jet5Test:
+    """Jet5 form Validator"""
     def __init__(self, test_data: TestData):
+        # Instance of class TestData for read and generate test data
         self.test_data = test_data
 
         # Logger
@@ -34,15 +37,22 @@ class Jet5Test:
 
         self.baseUrl = "https://jet5.ru/ru/"
 
+        # Driver initialization
         self.s = Service('./drivers/chromedriver.exe')
         self.driver = webdriver.Chrome(service=self.s)
 
         self.__logger.info("Driver started")
 
     def _open_form(self):
+        """Opening a web page and focusing on the form."""
+        # Open website
         driver = self.driver
         driver.get(self.baseUrl)
+
+        # Find form
         feedback_form = driver.find_element(By.ID, "form__feedback")
+
+        # Scroll to form
         actions = ActionChains(driver)
         actions.move_to_element(feedback_form)
         actions.perform()
@@ -50,24 +60,25 @@ class Jet5Test:
         return feedback_form
 
     def _send_data_to_form(self, form, is_negative=False):
+        """Find all fields and enter data there """
+
         # Find every <input> field in form
         feedback_fields = form.find_elements(By.TAG_NAME, "input")
 
         # Find <textarea> because it's a separate tag unlike <input>
         textarea_message = form.find_element(By.NAME, "message")
-        # textarea_message.send_keys(TEST_DATA["message"])
-
         feedback_fields.append(textarea_message)
 
         for field in feedback_fields:
             attribute_name = field.get_attribute("name")
-            if (attribute_name in self.test_data.feedback_fields_dict):
+            if attribute_name in self.test_data.feedback_fields_dict:
                 self.__logger.debug("InputName: " + attribute_name)
                 field.send_keys(self.test_data.feedback_fields_dict[attribute_name])
 
         self.__logger.info("All data pasted...")
 
     def _get_feedback_status(self, form):
+        """"""
         delay = 3  # seconds
         status = ""
 
@@ -93,6 +104,7 @@ class Jet5Test:
             # self.__logger.error("Loading took too much time!")
 
     def _press_send_btn(self, form):
+        """Press on send form data button"""
         send_btn = form.find_element(By.CSS_SELECTOR, "button.feedback__button")
         send_btn.click()
         self.__logger.debug("Btn \"Send\" clicked")
