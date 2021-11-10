@@ -1,3 +1,7 @@
+from enum import Enum
+
+from test_data import TestData
+
 import logging
 import logging.config
 
@@ -10,16 +14,20 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 
-TEST_DATA = {
-    "fio": ['Ivan'],
-    "email": ["test@gmail.com"],
-    "phone": ["81234567890"],
-    "message": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor."]
-}
+from PIL import Image
+import os
+
+
+class StatusTypes(Enum):
+    complete = 0,
+    error_data = 1,
+    error_loading_time = 2
 
 
 class Jet5Test:
-    def __init__(self):
+    def __init__(self, test_data: TestData):
+        self.test_data = test_data
+
         # Logger
         logging.config.fileConfig('logging.conf')
         self.__logger = logging.getLogger("jet5")
@@ -45,21 +53,23 @@ class Jet5Test:
         # Find every <input> field in form
         feedback_fields = form.find_elements(By.TAG_NAME, "input")
 
-        for field in feedback_fields:
-            attribute_name = field.get_attribute("name")
-            if (attribute_name in TEST_DATA):
-                self.__logger.debug("InputName: " + attribute_name)
-                field.send_keys(TEST_DATA[attribute_name][1 if is_negative else 0])
-
         # Find <textarea> because it's a separate tag unlike <input>
         textarea_message = form.find_element(By.NAME, "message")
-        textarea_message.send_keys(TEST_DATA["message"])
+        # textarea_message.send_keys(TEST_DATA["message"])
+
+        feedback_fields.append(textarea_message)
+
+        for field in feedback_fields:
+            attribute_name = field.get_attribute("name")
+            if (attribute_name in self.test_data.feedback_fields_dict):
+                self.__logger.debug("InputName: " + attribute_name)
+                field.send_keys(self.test_data.feedback_fields_dict[attribute_name])
 
         self.__logger.info("All data pasted...")
 
-    def _get_feedback_message(self, form):
-        # feedback_message = form.find_element(By.CSS_SELECTOR, "feedback__message_show")
-        delay = 5  # seconds
+    def _get_feedback_status(self, form):
+        delay = 3  # seconds
+        status = ""
 
         try:
             feedback_message = WebDriverWait(form, delay).until(
@@ -72,27 +82,59 @@ class Jet5Test:
             feedback_classes = feedback_message.get_attribute("class")
 
             if "complete" in feedback_classes:
-                self.__logger.info("Send Formdata complete")
+                status = StatusTypes.complete
 
             elif "error" in feedback_classes:
-                self.__logger.error("Send Formdata error")
+                status = StatusTypes.error_data
+
+            return status
         except TimeoutException:
-            self.__logger.error("Loading took too much time!")
+            return StatusTypes.error_loading_time
+            # self.__logger.error("Loading took too much time!")
 
     def _press_send_btn(self, form):
         send_btn = form.find_element(By.CSS_SELECTOR, "button.feedback__button")
         send_btn.click()
-        self.__logger.debug("Btn clicked")
+        self.__logger.debug("Btn \"Send\" clicked")
 
     def validate(self):
         feedback_form = self._open_form()
 
         self._send_data_to_form(feedback_form)
         self._press_send_btn(feedback_form)
-        feedback_message = self._get_feedback_message(feedback_form)
+        feedback_status = self._get_feedback_status(feedback_form)
+
+        if feedback_status == StatusTypes.complete:
+            self.__logger.info("All data sent successfully")
+        elif feedback_status == StatusTypes.error_data:
+            self.__logger.error("Wrong data")
+        elif feedback_status == StatusTypes.error_loading_time:
+            self.__logger.error("Timeout error")
+            self.element_screenshot(feedback_form)
+        # self.__logger.info(if feedback_status.complete)
+
+    def element_screenshot(self, element):
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots")
+
+        location = element.location_once_scrolled_into_view
+        size = element.size
+        self.driver.save_screenshot("./screenshots/pageImage.png")
+
+        # crop image
+        x = location['x']
+        y = location['y']
+        width = location['x'] + size['width']
+        height = location['y'] + size['height']
+        im = Image.open('./screenshots/pageImage.png')
+        im = im.crop((int(x), int(y), int(width), int(height)))
+        im.save('./screenshots/element.png')
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    jet5 = Jet5Test()
+    test_data = TestData()
+    print(test_data.set_negative())
+
+    jet5 = Jet5Test(test_data)
     jet5.validate()
