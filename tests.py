@@ -40,6 +40,7 @@ class Jet5Test:
         # Driver initialization
         self.s = Service('./drivers/chromedriver.exe')
         self.driver = webdriver.Chrome(service=self.s)
+        self.driver.set_window_size(width=1780, height=1000)
 
         self.__logger.info("Driver started")
 
@@ -118,6 +119,7 @@ class Jet5Test:
 
         if feedback_status == StatusTypes.complete:
             self.__logger.info("All data sent successfully")
+            self.element_screenshot(feedback_form)
         elif feedback_status == StatusTypes.error_data:
             self.__logger.error("Wrong data")
             self.element_screenshot(feedback_form)

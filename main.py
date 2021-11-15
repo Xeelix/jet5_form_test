@@ -13,6 +13,7 @@ from telegram.ext import (
 
 import logging
 import logging.config
+import constants
 
 from telegram.utils.helpers import escape_markdown
 
@@ -25,13 +26,13 @@ logging.config.fileConfig('logging.conf')
 logger = logging.getLogger("jet5TelegramBot")
 
 # Stages
-MAIN_MENU, VALIDATOR_MENU, LOGGER = range(3)
+MAIN_MENU, VALIDATOR_MENU, LOGGER_MENU = range(3)
 
 
 def main_menu_keyboard():
     return [
-        [InlineKeyboardButton("Validator", callback_data='validator_menu')],
-        [InlineKeyboardButton("Logger", callback_data='logger_menu')]
+        [InlineKeyboardButton("🤖 Validator", callback_data=constants.VALIDATOR_MENU)],
+        [InlineKeyboardButton("📝 Logger", callback_data=constants.LOGGER_MENU)]
     ]
 
 
@@ -41,7 +42,7 @@ def start(update: Update, context: CallbackContext) -> None:
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+    update.message.reply_text('💻 Main Menu:', reply_markup=reply_markup)
 
     return MAIN_MENU
 
@@ -58,24 +59,31 @@ def start_over(update, _) -> None:
     """Sends a message with three inline buttons attached."""
     keyboard = main_menu_keyboard()
     reply_markup = InlineKeyboardMarkup(keyboard)
-    query.edit_message_text('Please choose:', reply_markup=reply_markup)
+    query.edit_message_text('💻 Main Menu:', reply_markup=reply_markup)
 
     return MAIN_MENU
 
-
-def validate_form(update, context: CallbackContext) -> None:
+# region Validator
+def validate_form(update, context: CallbackContext, is_negative) -> None:
     """Starts jet5 form validator"""
+
     # Generate test data
     test_data = TestData()
-    test_data.set_negative(random_field=True)
 
     update.edit_message_text("Validation started 🕑")
 
+    # while True:
+    if is_negative:
+        test_data.set_negative(random_field=True)
+    else:
+        test_data.set_positive()
     jet5 = Jet5Test(test_data)
+
     feedback_status = jet5.validate()
 
     if feedback_status == StatusTypes.complete:
         update.message.reply_text("All data sent successfully ✔")
+        update.message.reply_photo(photo=open('./screenshots/element.png', 'rb'), caption="element.png")
     elif feedback_status == StatusTypes.error_data:
         update.message.reply_text("❌ Wrong data ❌")
         update.message.reply_photo(photo=open('./screenshots/pageImage.png', 'rb'), caption="pageImage.png")
@@ -86,19 +94,24 @@ def validate_form(update, context: CallbackContext) -> None:
         update.message.reply_photo(photo=open('./screenshots/element.png', 'rb'), caption="element.png")
 
 
+def validator_menu_keyboard():
+    return [
+        [InlineKeyboardButton("🟢 Positive", callback_data=constants.POSITIVE)],
+        [InlineKeyboardButton("🔴 Negative (rnd field)", callback_data=constants.NEGATIVE)],
+        [InlineKeyboardButton("⬅ Back", callback_data=constants.BACK)],
+    ]
+
+
 def validator_menu(update, _):
     """Показ нового выбора кнопок"""
     query = update.callback_query
     query.answer()
-    keyboard = [
-        [InlineKeyboardButton("Validate Positive", callback_data=str("positive"))],
-        [InlineKeyboardButton("Validate Negative", callback_data=str("negative"))],
-        [InlineKeyboardButton("Back", callback_data=str("back"))],
 
-    ]
+    keyboard = validator_menu_keyboard()
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(
-        text="Validator Menu: ", reply_markup=reply_markup
+        text="🤖 Validator Menu: ", reply_markup=reply_markup
     )
     return VALIDATOR_MENU
 
@@ -107,21 +120,73 @@ def validator_negative(update: Update, context: CallbackContext):
     """Показ нового выбора кнопок"""
     query = update.callback_query
     query.answer()
-    keyboard = [
-        [InlineKeyboardButton("Validate Positive", callback_data=str("positive"))],
-        [InlineKeyboardButton("Validate Negative", callback_data=str("negative"))],
-        [InlineKeyboardButton("Back", callback_data=str("back"))],
 
-    ]
+    keyboard = validator_menu_keyboard()
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    validate_form(query, context)
+    validate_form(query, context, is_negative=True)
 
     query.message.reply_text(
-        text="Validator Menu: ", reply_markup=reply_markup
+        text="🤖 Validator Menu: ", reply_markup=reply_markup
     )
     # query.message.reply_text('Please choose:')
     return VALIDATOR_MENU
+
+
+def validator_positive(update: Update, context: CallbackContext):
+    """Показ нового выбора кнопок"""
+    query = update.callback_query
+    query.answer()
+
+    keyboard = validator_menu_keyboard()
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    validate_form(query, context, is_negative=False)
+
+    query.message.reply_text(
+        text="🤖 Validator Menu: ", reply_markup=reply_markup
+    )
+    return VALIDATOR_MENU
+# endregion
+
+# region Logger
+def logger_menu_keyboard():
+    return [
+        [InlineKeyboardButton("🌍 Get all logs", callback_data=constants.ALL_LOGS)],
+        [InlineKeyboardButton("⬅ Back", callback_data=constants.BACK)],
+    ]
+
+
+def logger_menu(update, _):
+    """Показ нового выбора кнопок"""
+    query = update.callback_query
+    query.answer()
+
+    keyboard = logger_menu_keyboard()
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.edit_message_text(
+        text="📝 Logger Menu: ", reply_markup=reply_markup
+    )
+    return LOGGER_MENU
+
+
+def logger_get_all_logs(update, _):
+    query = update.callback_query
+    query.answer()
+
+    keyboard = logger_menu_keyboard()
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    query.edit_message_text("TODO")
+    query.message.reply_text(
+        text="📝 Logger Menu: ", reply_markup=reply_markup
+    )
+    return LOGGER_MENU
+# endregion
 
 
 def main():
@@ -136,19 +201,19 @@ def main():
         entry_points=[CommandHandler('start', start)],
         states={
             MAIN_MENU: [
-                CallbackQueryHandler(validator_menu, pattern='^' + str("validator_menu") + '$'),
+                CallbackQueryHandler(validator_menu, pattern=constants.VALIDATOR_MENU),
+                CallbackQueryHandler(logger_menu, pattern=constants.LOGGER_MENU),
                 # CallbackQueryHandler(two, pattern='^' + str(TWO) + '$'),
             ],
             VALIDATOR_MENU: [
-                CallbackQueryHandler(validator_negative, pattern='^' + str("negative") + '$'),
-                CallbackQueryHandler(start_over, pattern='^' + str("back") + '$'),
-                # CallbackQueryHandler(two, pattern='^' + str(TWO) + '$'),
+                CallbackQueryHandler(validator_negative, pattern=constants.NEGATIVE),
+                CallbackQueryHandler(validator_positive, pattern=constants.POSITIVE),
+                CallbackQueryHandler(start_over, pattern=constants.BACK),
             ],
-            # LOGGER: [
-            #     CallbackQueryHandler(validate_form, pattern='^' + str("validate") + '$'),
-            #     # CallbackQueryHandler(start_over, pattern='^' + str(ONE) + '$'),
-            #     # CallbackQueryHandler(end, pattern='^' + str(TWO) + '$'),
-            # ],
+            LOGGER_MENU: [
+                CallbackQueryHandler(logger_get_all_logs, pattern=constants.ALL_LOGS),
+                CallbackQueryHandler(start_over, pattern=constants.BACK),
+            ],
         },
         fallbacks=[CommandHandler('start', start)],
     )
