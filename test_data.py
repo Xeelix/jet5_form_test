@@ -1,3 +1,5 @@
+import random
+
 FEEDBACK_FIELDS_ARRAY = ["fio", "email", "phone", "message"]
 
 
@@ -18,16 +20,20 @@ class TestData:
                 self.feedback_fields_dict[field] = data[field]
 
             # Array data
-            if isinstance(data, list):
+            if isinstance(data, list) and (len(data) == len(FEEDBACK_FIELDS_ARRAY)):
                 self.feedback_fields_dict[field] = data[i]
 
         return self.feedback_fields_dict
 
     def set_by_params(self, fio=None, email=None, phone=None, message=None):
-        if fio: self.feedback_fields_dict["fio"] = fio
-        if email: self.feedback_fields_dict["email"] = email
-        if phone: self.feedback_fields_dict["phone"] = phone
-        if message: self.feedback_fields_dict["message"] = message
+        if fio:
+            self.feedback_fields_dict["fio"] = fio
+        if email:
+            self.feedback_fields_dict["email"] = email
+        if phone:
+            self.feedback_fields_dict["phone"] = phone
+        if message:
+            self.feedback_fields_dict["message"] = message
 
         return self.feedback_fields_dict
 
@@ -44,12 +50,18 @@ class TestData:
 
         return self.set_by_data(test)
 
-    def set_negative(self):
+    def set_negative(self, random_field=False):
         test = {
             "fio": "Test User",
-            "email": "testmail.ru",
-            "phone": "1",
+            "email": "test@mail.ru",
+            "phone": "79202312312",
             "message": "Lorem."
         }
+
+        if random_field:
+            i = random.randrange(0, len(FEEDBACK_FIELDS_ARRAY))
+            test[FEEDBACK_FIELDS_ARRAY[i]] = ""
+        else:
+            test["email"] = "jtsd.com"
 
         return self.set_by_data(test)

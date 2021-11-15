@@ -120,6 +120,7 @@ class Jet5Test:
             self.__logger.info("All data sent successfully")
         elif feedback_status == StatusTypes.error_data:
             self.__logger.error("Wrong data")
+            self.element_screenshot(feedback_form)
         elif feedback_status == StatusTypes.error_loading_time:
             self.__logger.error("Timeout error")
             self.element_screenshot(feedback_form)
