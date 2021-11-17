@@ -70,28 +70,29 @@ def validate_form(update, context: CallbackContext, is_negative) -> None:
     # Generate test data
     test_data = TestData()
 
+    # Information for user
     update.edit_message_text("Validation started 🕑")
 
-    # while True:
+    #
     if is_negative:
         test_data.set_negative(random_field=True)
     else:
         test_data.set_positive()
-    jet5 = Jet5Test(test_data)
 
+    # Instance object of the Jet5Test class
+    jet5 = Jet5Test(test_data)
+    # Start validation
     feedback_status = jet5.validate()
 
     if feedback_status == StatusTypes.complete:
         update.message.reply_text("All data sent successfully ✔")
-        update.message.reply_photo(photo=open('./screenshots/element.png', 'rb'), caption="element.png")
     elif feedback_status == StatusTypes.error_data:
         update.message.reply_text("❌ Wrong data ❌")
-        update.message.reply_photo(photo=open('./screenshots/pageImage.png', 'rb'), caption="pageImage.png")
-        update.message.reply_photo(photo=open('./screenshots/element.png', 'rb'), caption="element.png")
     elif feedback_status == StatusTypes.error_loading_time:
         update.message.reply_text("❌ Timeout error ❌")
-        update.message.reply_photo(photo=open('./screenshots/pageImage.png', 'rb'), caption="pageImage.png")
-        update.message.reply_photo(photo=open('./screenshots/element.png', 'rb'), caption="element.png")
+
+    update.message.reply_photo(photo=open('./screenshots/pageImage.png', 'rb'), caption="pageImage.png")
+    update.message.reply_photo(photo=open('./screenshots/element.png', 'rb'), caption="element.png")
 
 
 def validator_menu_keyboard():
